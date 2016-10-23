@@ -7,9 +7,6 @@
 
 using namespace std;
 
-// the distance matrix
-int dist[MAX][MAX];
-
 int main()
 {
     int N;
