@@ -36,7 +36,6 @@ bool check(pi idxs, int N)
         {
             if (first_parent != second_parent)
             {
-                //cout << "Counter: " << counter << endl;
                 parent[first_parent] = parent[second_parent];
                 ++used[idxs.first];
                 ++used[idxs.second];
@@ -46,7 +45,6 @@ bool check(pi idxs, int N)
         } else if (counter == N) {
             if (first_parent == second_parent)
             {
-                //cout << "Counter: " << counter << endl;
                 ++used[idxs.first];
                 ++used[idxs.second];
                 ++counter;
@@ -109,18 +107,14 @@ int main()
         points[i] = make_pair(x, y);
     }
     generateDistances(N, graph);
-    //for (int i = 0; i < graph.size(); ++i)
-        //cout << graph[i].first << endl;
 
     // multi fragment algorithm
     for (int i = 0; i < graph.size(); ++i)
         if (check(graph[i].second, N))
         {
-            //for (int j = 0; j < N; ++j)
-                //cout << used[j] << endl;
-            //cout << graph[i].second.first << " " << graph[i].second.second << endl;
             neighbor[graph[i].second.first].push_back(graph[i].second.second);
             neighbor[graph[i].second.second].push_back(graph[i].second.first);
+            if (counter > N) break;
         }
 
     // construct tour
