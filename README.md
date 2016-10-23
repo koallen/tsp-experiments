@@ -5,6 +5,8 @@ about this problem on Kattis, please refer to the [problem description](https://
 
 ## Current status
 
-| Algorithm        | Score    |
-|------------------|----------|
-| Nearest Neighbor | 3.051487 |
+| Algorithm          | Score      |
+| ------------------ | ---------- |
+| Ordered vertices   | 1.212971   |
+| Nearest Neighbor   | 3.051487   |
+| Multi Fragment     | 5.793946   |
