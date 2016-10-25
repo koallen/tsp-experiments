@@ -6,7 +6,6 @@
 #include <cmath>
 #include <climits>
 #include <chrono>
-#include <unistd.h>
 
 #define MAX 1000
 #define TIME_LIMIT 1990000000
@@ -43,11 +42,7 @@ int calculateTour(int *tour, int N)
 {
     int tour_distance = 0;
     for (int i = 0; i < N - 1; ++i)
-    {
-        //cout << "pair: " << tour[i] << " " << tour[i+1] << endl;
         tour_distance += graph[tour[i]][tour[i+1]];
-    }
-    //cout << "pair: " << tour[N-1] << " " << tour[0] << endl;
     tour_distance += graph[tour[N-1]][tour[0]];
     return tour_distance;
 }
@@ -60,8 +55,6 @@ void swap(int a, int b, int N, int *tour, int *new_tour)
         new_tour[a + i] = tour[b - i];
     for (int i = b + 1; i < N; ++i)
         new_tour[i] = tour[i];
-    //for (int i = 0; i < N; ++i)
-        //cout << new_tour[i] << endl;
 }
 
 int main()
@@ -87,17 +80,14 @@ int main()
     {
         best = -1;
         for (int j = 0; j < N; ++j)
-        {
             if (!used[j] && (best == -1 || dist(tour[i-1], j) < dist(tour[i-1], best)))
                 best = j;
-        }
         tour[i] = best;
         used[best] = true;
     }
 
     int best_tour_dist = calculateTour(tour, N);
     int new_distance;
-    //cout << "Current best: " << best_tour_dist << endl;
 
 START_AGAIN:
     for (int i = 1; i < N - 1; ++i)
@@ -105,7 +95,6 @@ START_AGAIN:
         {
             auto t2 = chrono::high_resolution_clock::now();
             chrono::duration<int64_t,nano> elapsed = t2 - t1;
-            //cout << elapsed.count() << endl;
             if (elapsed.count() > TIME_LIMIT)
                 goto END;
             swap(i, k, N, tour, new_tour);
@@ -114,7 +103,6 @@ START_AGAIN:
             {
                 memcpy(tour, new_tour, sizeof(int) * N);
                 best_tour_dist = new_distance;
-                //cout << "Current best: " << best_tour_dist << endl;
                 goto START_AGAIN;
             }
         }
