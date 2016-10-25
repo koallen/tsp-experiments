@@ -10,4 +10,4 @@ about this problem on Kattis, please refer to the [problem description](https://
 | Ordered vertices   | 1.212971   |
 | Nearest Neighbor   | 3.051487   |
 | Multi Fragment     | 5.793946   |
-| 2-Opt (w/ NN)      | 13.826858  |
+| 2-Opt (w/ NN)      | 13.833762  |

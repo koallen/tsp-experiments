@@ -1,5 +1,5 @@
 /*
- * This can get 13.826858 points in 1.99s
+ * This can get 13.833762 points in 1.99s
  */
 #include <iostream>
 #include <cstring>
