@@ -1,5 +1,5 @@
 /*
- * This can get 18.769668 points in 1.99s
+ * This can get 18.782187 points in 1.99s
  */
 #include <iostream>
 #include <cstring>
@@ -10,6 +10,7 @@
 #define MAX 1000
 #define TIME_LIMIT 1990000000
 #define pf pair<float, float>
+#define endl "\n"
 
 using namespace std;
 
@@ -70,6 +71,7 @@ void swap(int a, int b, int *tour)
 
 int main()
 {
+    ios::sync_with_stdio(false);
     auto t1 = chrono::high_resolution_clock::now();
 
     int N, best;

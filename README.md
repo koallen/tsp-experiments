@@ -11,4 +11,4 @@ about this problem on Kattis, please refer to the [problem description](https://
 | 1   | Nearest Neighbor    | 3.051487   |
 | 2   | Multi Fragment      | 5.793946   |
 | 3   | 2-Opt (w/ NN)       | 13.833762  |
-| 4   | 2-Opt Delta (w/ NN) | 18.769668  |
+| 4   | 2-Opt Delta (w/ NN) | 18.782187  |
