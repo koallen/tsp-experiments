@@ -47,14 +47,25 @@ int calculateTour(int *tour, int N)
     return tour_distance;
 }
 
-void swap(int a, int b, int N, int *tour, int *new_tour)
+int deltaEval(int i, int k, int *tour, int current_best, int N)
 {
-    for (int i = 0; i < a; ++i)
-        new_tour[i] = tour[i];
-    for (int i = 0; i < b - a + 1; ++i)
-        new_tour[a + i] = tour[b - i];
-    for (int i = b + 1; i < N; ++i)
-        new_tour[i] = tour[i];
+    int new_distance;
+    if (k == N - 1)
+        new_distance = current_best + graph[tour[i-1]][tour[k]] + graph[tour[i]][tour[0]] - graph[tour[i-1]][tour[i]] - graph[tour[k]][tour[0]];
+    else
+        new_distance = current_best + graph[tour[i-1]][tour[k]] + graph[tour[i]][tour[k+1]] - graph[tour[i-1]][tour[i]] - graph[tour[k]][tour[k+1]];
+    return new_distance;
+}
+
+void swap(int a, int b, int *tour)
+{
+    int temp;
+    for (int i = 0; i < (b - a + 1) / 2; ++i)
+    {
+        temp = tour[a + i];
+        tour[a + i] = tour[b - i];
+        tour[b - i] = temp;
+    }
 }
 
 int main()
@@ -97,11 +108,15 @@ START_AGAIN:
             chrono::duration<int64_t,nano> elapsed = t2 - t1;
             if (elapsed.count() > TIME_LIMIT)
                 goto END;
-            swap(i, k, N, tour, new_tour);
-            new_distance = calculateTour(new_tour, N);
+            //swap(i, k, N, tour, new_tour);
+            //new_distance = calculateTour(new_tour, N);
+            //cout << new_distance << endl;
+            new_distance = deltaEval(i, k, tour, best_tour_dist, N);
+            //cout << new_distance << endl;
             if (new_distance < best_tour_dist)
             {
-                memcpy(tour, new_tour, sizeof(int) * N);
+                swap(i, k, tour);
+                //memcpy(tour, new_tour, sizeof(int) * N);
                 best_tour_dist = new_distance;
                 goto START_AGAIN;
             }
