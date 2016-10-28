@@ -226,6 +226,7 @@ int main()
     int best_tour_dist = calculateTour(tour, N); // best tour for the 1st round
     int best_tour_dist_2;                        // best tour for the 2nd round
     int new_distance;
+    int start, finish;
 
 START_AGAIN:
     // 2-opt local search
@@ -278,7 +279,12 @@ RETOUR:
             goto END2;
         if (best_tour_dist_2 < best_tour_dist)
             memcpy(backup, tour, sizeof(int)*N);
-        random_shuffle(begin(tour), begin(tour)+N);
+        start = rand() % N;
+        finish = rand() % N;
+        if (start < finish)
+            random_shuffle(begin(tour)+start, begin(tour)+finish);
+        else
+            random_shuffle(begin(tour)+finish, begin(tour)+start);
         best_tour_dist = best_tour_dist_2;
         best_tour_dist_2 = calculateTour(tour, N);
     }
