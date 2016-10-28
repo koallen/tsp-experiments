@@ -60,7 +60,7 @@ int dist(int idxA, int idxB)
 {
     pf pointA = points[idxA];
     pf pointB = points[idxB];
-    return sqrt(pow(pointA.first - pointB.first, 2) + pow(pointA.second - pointB.second, 2));
+    return sqrt(pow(pointA.first - pointB.first, 2) + pow(pointA.second - pointB.second, 2)) + 0.5;
 }
 
 void generateDistances(int N, vector<pair<int, pi> > &graph)
