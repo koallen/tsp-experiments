@@ -182,6 +182,7 @@ int main()
     float x, y;
 
     counter = 1;
+    int iteration = 0;
 
     cin >> N;
     for (int i = 0; i < N; ++i)
@@ -227,11 +228,26 @@ START_AGAIN:
                 goto START_AGAIN;
             }
         }
+    iteration++;
 
+RETOUR:
     // backup the current best tour and randomly shuffle the tour to restart
-    memcpy(backup, tour, sizeof(int)*N);
-    random_shuffle(begin(tour), begin(tour)+N);
-    best_tour_dist_2 = calculateTour(tour, N);
+    if (iteration == 1)
+    {
+        memcpy(backup, tour, sizeof(int)*N);
+        random_shuffle(begin(tour), begin(tour)+N);
+        best_tour_dist_2 = calculateTour(tour, N);
+    } else {
+        auto t3 = chrono::high_resolution_clock::now();
+        chrono::duration<int64_t,nano> elapsed_2 = t3 - t1;
+        if (elapsed_2.count() > TIME_LIMIT)
+            goto END2;
+        if (best_tour_dist_2 < best_tour_dist)
+            memcpy(backup, tour, sizeof(int)*N);
+        random_shuffle(begin(tour), begin(tour)+N);
+        best_tour_dist = best_tour_dist_2;
+        best_tour_dist_2 = calculateTour(tour, N);
+    }
 
 SECOND_ROUND:
     for (int i = 1; i < N - 1; ++i)
@@ -249,7 +265,8 @@ SECOND_ROUND:
                 goto SECOND_ROUND;
             }
         }
-    goto END2;
+    iteration++;
+    goto RETOUR;
 
 END1:
     for (int i = 0; i < N; ++i)
