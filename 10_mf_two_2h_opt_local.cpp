@@ -7,6 +7,7 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <ctime>
 
 #define MAX 1000
 #define TIME_LIMIT 1990000000
@@ -190,6 +191,7 @@ void swapTwoH(int a, int b, int *tour)
 int main()
 {
     ios::sync_with_stdio(false); // optimize I/O
+    srand(time(NULL)); // random seed
     auto t1 = chrono::high_resolution_clock::now(); // start timer
 
     vector<pair<int, pi> > graph;
