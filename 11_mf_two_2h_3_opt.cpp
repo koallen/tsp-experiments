@@ -257,28 +257,26 @@ void initTour(int N, vector<pair<int, pi> > &graph, int *tour)
 /*
  * Optimize with 2-opt exchange until local optima
  */
-void twoOpt(int *tour, int &bestTourDist, int N, int K, timestamp t1)
+void twoOpt(int *tour, int &bestTourDist, const int N, const int K)
 {
     int u, v, x, y;
     int pos_u, pos_v, pos_x, pos_y;
-    bool localOptimal;
+    bool localOptima;
 
     // 2-opt local search
     do {
-        //cout << "2-opt" << endl;
-        localOptimal = true;
-        for (int i = 0; i < N; ++i)
+        localOptima = true;
+        for (int pos_u = 0; pos_u < N; ++pos_u)
         {
-            pos_u = i;
             pos_v = (pos_u + 1) % N;
             u = tour[pos_u];
             v = tour[pos_v];
             for (int k = 0; k < K; ++k)
             {
                 pos_x = position[neighbors[u][k].second];
-                pos_y = pos_x + 1;
+                pos_y = (pos_x + 1) % N;
                 x = tour[pos_x];
-                y = tour[pos_y % N];
+                y = tour[pos_y];
 
                 if (v == x || y == u)
                     continue;
@@ -289,16 +287,17 @@ void twoOpt(int *tour, int &bestTourDist, int N, int K, timestamp t1)
                 {
                     bestTourDist = deltaEval(pos_u, pos_x, tour, bestTourDist, N);
                     reverse(pos_v, pos_x, N, tour);
-                    localOptimal = false;
+                    localOptima = false;
                     break;
                 }
             }
         }
-    } while (!localOptimal);
+    } while (!localOptima);
 }
 
 void twoHOpt(int *tour, int &best_tour_dist, int N)
 {
+    // TODO: look into faster implementation of 2.5 opt
     int new_distance;
     // 2.5 opt
     for (int i = 1; i < N - 3; ++i)
@@ -314,6 +313,109 @@ void twoHOpt(int *tour, int &best_tour_dist, int N)
         }
 }
 
+void orderEdges(int &A, int &B, int &C, int &D, int &E, int &F,
+                int U, int V, int W, int X, int Y, int Z)
+{
+    E = Y;
+    F = Z;
+
+    if ((W < U && U < Y) || (Y < W && W < U) || (U < Y && Y < W))
+    {
+        A = W;
+        B = X;
+        C = U;
+        D = V;
+    } else {
+        A = U;
+        B = V;
+        C = W;
+        D = X;
+    }
+}
+
+/*
+ * Optimize with 3-opt exchange until local optima
+ */
+void threeOpt(int *tour, int &bestTourDist, const int N, const int K, timestamp t1)
+{
+    int u, v, a, b, x, y;
+    int pos_u, pos_v, pos_a, pos_b, pos_x, pos_y;
+    int pos_1, pos_2, pos_3, pos_4, pos_5, pos_6;
+    int one, two, three, four, five, six;
+    bool localOptima;
+    duration e1;
+
+    // 3-opt local search
+    do {
+        localOptima = true;
+        for (int pos_u = 0; pos_u < N; ++pos_u)
+        {
+            TIMER(t2)
+            DURATION(e1, t1, t2)
+            if (e1.count() > TIME_LIMIT)
+                return;
+
+            pos_v = (pos_u + 1) % N;
+            u = tour[pos_u];
+            v = tour[pos_v];
+
+            for (int i = 0; i < K; ++i) // find b that's closer to u
+            {
+                pos_b = position[neighbors[u][i].second];
+                pos_a = (pos_b + N - 1) % N;
+                a = tour[pos_a];
+                b = tour[pos_b];
+
+                // TODO: use max and min to reduce runtime
+                if (v == a || u == a)
+                    continue;
+
+                for (int j = 0; j < K; ++j)
+                {
+                    pos_y = position[neighbors[v][j].second];
+                    pos_x = (pos_y + N - 1) % N;
+                    x = tour[pos_x];
+                    y = tour[pos_y];
+
+                    // TODO: use max and min to reduce runtime
+                    if (x == b || y == b || y == a || x == u || x == v)
+                        continue;
+
+                    int dist = distMatrix[u][v] + distMatrix[a][b] + distMatrix[x][y];
+                    orderEdges(pos_1, pos_2, pos_3, pos_4, pos_5, pos_6, pos_u, pos_v, pos_a, pos_b, pos_x, pos_y);
+                    one = tour[pos_1]; two = tour[pos_2]; three = tour[pos_3];
+                    four = tour[pos_4]; five = tour[pos_5]; six = tour[pos_6];
+                    if (distMatrix[one][four] + distMatrix[two][six] + distMatrix[three][five] < dist)
+                    {
+                        reverse(pos_6, pos_1, N, tour);
+                        reverse(pos_4, pos_5, N, tour);
+                        localOptima = false;
+                        goto NEXT_ROUND;
+                    } else if (distMatrix[two][four] + distMatrix[five][one] + distMatrix[six][three] < dist) {
+                        reverse(pos_6, pos_1, N, tour);
+                        reverse(pos_2, pos_3, N, tour);
+                        localOptima = false;
+                        goto NEXT_ROUND;
+                    } else if (distMatrix[one][three] + distMatrix[two][five] + distMatrix[four][six] < dist) {
+                        reverse(pos_2, pos_3, N, tour);
+                        reverse(pos_4, pos_5, N, tour);
+                        localOptima = false;
+                        goto NEXT_ROUND;
+                    } else if (distMatrix[two][five] + distMatrix[four][one] + distMatrix[six][three] < dist) {
+                        reverse(pos_1, pos_6, N, tour);
+                        reverse(pos_2, pos_3, N, tour);
+                        reverse(pos_4, pos_5, N, tour);
+                        localOptima = false;
+                        goto NEXT_ROUND;
+                    }
+                }
+            }
+NEXT_ROUND:
+            continue;
+        }
+    } while (!localOptima);
+}
+
 void TSP(int *tour, const int N, const int K, timestamp &t1)
 {
     int bestTourDist = calculateTour(tour, N); // best tour for the 1st round
@@ -321,8 +423,9 @@ void TSP(int *tour, const int N, const int K, timestamp &t1)
     bool backedup = false;
 
     // do optimization
-    twoOpt(tour, bestTourDist, N, K, t1);
+    twoOpt(tour, bestTourDist, N, K);
     twoHOpt(tour, bestTourDist, N);
+    threeOpt(tour, bestTourDist, N, K, t1);
     //bestTourDist = calculateTour(tour, N);
 
     //// local retour
