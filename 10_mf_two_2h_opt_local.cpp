@@ -7,13 +7,19 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <climits>
 #include <ctime>
 
 #define MAX 1000
-#define TIME_LIMIT 1980000000
+#define TIME_LIMIT 1900000000
 #define pf pair<float, float>
 #define pi pair<int, int>
 #define endl "\n"
+
+#define timestamp chrono::high_resolution_clock::time_point
+#define duration chrono::duration<int64_t,nano>
+#define TIMER(t) auto t = chrono::high_resolution_clock::now();
+#define DURATION(ela, t1, t2) ela = t2 - t1;
 
 using namespace std;
 
@@ -26,6 +32,8 @@ int parent[MAX];           // for checking whether a cycle is formed
 int tour[MAX];             // stores the complete tour
 int backup[MAX];           // a backup of the current best tour
 int distMatrix[MAX][MAX];  // distance matrix
+vector<pi> neighbors[MAX]; // sorted K nearest neighbors of each city
+int position[MAX];            // keeps track of where a city is
 
 /*
  * Finds the parent of a city using the union find algorithm
@@ -98,7 +106,7 @@ void generateDistances(int N, vector<pair<int, pi> > &graph)
     for (int i = 0; i < N; ++i)
         for (int j = 0; j < i; ++j)
             if (i != j)
-                graph.push_back(pair<int, pi>(dist(i, j), pi(i, j)));
+                graph.push_back(pair<int, pi>(distMatrix[i][j], pi(i, j)));
     sort(graph.begin(), graph.end());
 }
 
@@ -116,7 +124,11 @@ void generateDistancesMatrix(int N)
                 int distance = dist(i, j);
                 distMatrix[i][j] = distance;
                 distMatrix[j][i] = distance;
+                neighbors[i].push_back(pi(distance, j));
+                neighbors[j].push_back(pi(distance, i));
             }
+    for (int i = 0; i < N; ++i)
+        sort(neighbors[i].begin(), neighbors[i].end());
 }
 
 /*
@@ -162,14 +174,22 @@ int deltaEval(int i, int k, int *tour, int current_best, int N)
     return new_distance;
 }
 
-void swap(int a, int b, int *tour)
+void reverse(int start, int end, int N, int *tour)
 {
-    int temp;
-    for (int i = 0; i < (b - a + 1) / 2; ++i)
+    int num = ((start <= end ? end - start : (end + N) - start) + 1) / 2;
+    int temp, currentHead = start, currentTail = end;
+    for (int i = 0; i < num; ++i)
     {
-        temp = tour[a + i];
-        tour[a + i] = tour[b - i];
-        tour[b - i] = temp;
+        // swap 2 elements
+        temp = tour[currentHead];
+        tour[currentHead] = tour[currentTail];
+        tour[currentTail] = temp;
+        // update city position
+        position[tour[currentHead]] = currentHead;
+        position[tour[currentTail]] = currentTail;
+        // update head and tail
+        currentHead = (currentHead + 1) % N;
+        currentTail = ((currentTail + N) - 1) % N;
     }
 }
 
@@ -188,31 +208,15 @@ void swapTwoH(int a, int b, int *tour)
     tour[b] = temp;
 }
 
-int main()
+void updateCityPosition(int *tour, int N)
 {
-    ios::sync_with_stdio(false); // optimize I/O
-    srand(time(NULL)); // random seed
-    auto t1 = chrono::high_resolution_clock::now(); // start timer
+    for (int i = 0; i < N; ++i)
+        position[tour[i]] = i;
+}
 
-    vector<pair<int, pi> > graph;
-    int N;
-    float x, y;
-
+void MF(vector<pair<int, pi> > &graph, int N)
+{
     counter = 1;
-
-    int iteration = 0;
-
-    cin >> N;
-    for (int i = 0; i < N; ++i)
-        parent[i] = i;
-    for (int i = 0; i < N; ++i)
-    {
-        cin >> x >> y;
-        points[i] = make_pair(x, y);
-    }
-    generateDistances(N, graph);
-    generateDistancesMatrix(N);
-
     // multi fragment algorithm
     for (int i = 0; i < graph.size(); ++i)
         if (check(graph[i].second, N))
@@ -221,126 +225,147 @@ int main()
             neighbor[graph[i].second.second].push_back(graph[i].second.first);
             if (counter > N) break;
         }
+}
 
-    // construct tour
+void init(int &N, int &K, vector<pair<int, pi> > &graph)
+{
+    float x, y;
+
+    cin >> N;
+    K = N / 17;
+
+    for (int i = 0; i < N; ++i)
+        parent[i] = i;
+
+    for (int i = 0; i < N; ++i)
+    {
+        cin >> x >> y;
+        points[i] = make_pair(x, y);
+    }
+
+    generateDistancesMatrix(N);
+    generateDistances(N, graph);
+}
+
+void initTour(int N, vector<pair<int, pi> > &graph, int *tour)
+{
+    MF(graph, N);
     generateTour(N);
+    updateCityPosition(tour, N);
+}
 
-    int best_tour_dist = calculateTour(tour, N); // best tour for the 1st round
-    int best_tour_dist_2;                        // best tour for the 2nd round
-    int new_distance;
-    int start, finish;
+/*
+ * Optimize with 2-opt exchange until local optima
+ */
+void twoOpt(int *tour, int &bestTourDist, int N, int K, timestamp t1)
+{
+    int u, v, x, y;
+    int pos_u, pos_v, pos_x, pos_y;
+    bool localOptimal;
 
-START_AGAIN:
     // 2-opt local search
-    for (int i = 1; i < N - 1; ++i)
-        for (int k = i + 1; k < N; ++k)
+    do {
+        //cout << "2-opt" << endl;
+        localOptimal = true;
+        for (int i = 0; i < N; ++i)
         {
-            auto t2 = chrono::high_resolution_clock::now();
-            chrono::duration<int64_t,nano> elapsed = t2 - t1;
-            if (elapsed.count() > TIME_LIMIT)
-                goto END1;
-            new_distance = deltaEval(i, k, tour, best_tour_dist, N);
-            if (new_distance < best_tour_dist)
+            pos_u = i;
+            pos_v = (pos_u + 1) % N;
+            u = tour[pos_u];
+            v = tour[pos_v];
+            for (int k = 0; k < K; ++k)
             {
-                swap(i, k, tour);
-                best_tour_dist = new_distance;
-                goto START_AGAIN;
+                pos_x = position[neighbors[u][k].second];
+                pos_y = pos_x + 1;
+                x = tour[pos_x];
+                y = tour[pos_y % N];
+
+                if (v == x || y == u)
+                    continue;
+
+                // TODO: minimize runtime with min and max
+
+                if (distMatrix[u][x] + distMatrix[v][y] < distMatrix[u][v] + distMatrix[x][y])
+                {
+                    bestTourDist = deltaEval(pos_u, pos_x, tour, bestTourDist, N);
+                    reverse(pos_v, pos_x, N, tour);
+                    localOptimal = false;
+                    break;
+                }
             }
         }
+    } while (!localOptimal);
+}
+
+void twoHOpt(int *tour, int &best_tour_dist, int N)
+{
+    int new_distance;
     // 2.5 opt
     for (int i = 1; i < N - 3; ++i)
         for (int k = i + 2; k < N - 1; ++k)
         {
-            auto t2 = chrono::high_resolution_clock::now();
-            chrono::duration<int64_t,nano> elapsed = t2 - t1;
-            if (elapsed.count() > TIME_LIMIT)
-                goto END1;
             new_distance = deltaTwoH(i, k, tour, best_tour_dist, N);
             if (new_distance < best_tour_dist)
             {
                 swapTwoH(i, k, tour);
                 best_tour_dist = new_distance;
-                goto START_AGAIN;
+                break;
             }
         }
-    ++iteration;
+}
 
+void TSP(int *tour, const int N, const int K, timestamp &t1)
+{
+    int bestTourDist = calculateTour(tour, N); // best tour for the 1st round
+    int bestTourDist2 = INT_MAX;
+    bool backedup = false;
 
-RETOUR:
-    // backup the current best tour and randomly shuffle the tour to restart
-    //cout << "finished iteration " << iteration << endl;
-    if (iteration == 1)
-    {
-        memcpy(backup, tour, sizeof(int)*N);
-        random_shuffle(begin(tour), begin(tour)+N);
-        best_tour_dist_2 = calculateTour(tour, N);
-    } else {
-        auto t3 = chrono::high_resolution_clock::now();
-        chrono::duration<int64_t,nano> elapsed_2 = t3 - t1;
-        if (elapsed_2.count() > TIME_LIMIT)
-            goto END2;
-        if (best_tour_dist_2 < best_tour_dist)
-            memcpy(backup, tour, sizeof(int)*N);
-        start = rand() % N;
-        finish = rand() % N;
-        if (start < finish)
-            random_shuffle(begin(tour)+start, begin(tour)+finish);
-        else
-            random_shuffle(begin(tour)+finish, begin(tour)+start);
-        best_tour_dist = best_tour_dist_2;
-        best_tour_dist_2 = calculateTour(tour, N);
-    }
+    // do optimization
+    twoOpt(tour, bestTourDist, N, K, t1);
+    twoHOpt(tour, bestTourDist, N);
+    //bestTourDist = calculateTour(tour, N);
 
-SECOND_ROUND:
-    for (int i = 1; i < N - 1; ++i)
-        for (int k = i + 1; k < N; ++k)
-        {
-            auto t3 = chrono::high_resolution_clock::now();
-            chrono::duration<int64_t,nano> elapsed_2 = t3 - t1;
-            if (elapsed_2.count() > TIME_LIMIT)
-                goto END2;
-            new_distance = deltaEval(i, k, tour, best_tour_dist_2, N);
-            if (new_distance < best_tour_dist_2)
-            {
-                swap(i, k, tour);
-                best_tour_dist_2 = new_distance;
-                goto SECOND_ROUND;
-            }
-        }
-    // 2.5 opt
-    for (int i = 1; i < N - 3; ++i)
-        for (int k = i + 2; k < N - 1; ++k)
-        {
-            auto t3 = chrono::high_resolution_clock::now();
-            chrono::duration<int64_t,nano> elapsed_2 = t3 - t1;
-            if (elapsed_2.count() > TIME_LIMIT)
-                goto END2;
-            new_distance = deltaTwoH(i, k, tour, best_tour_dist_2, N);
-            if (new_distance < best_tour_dist_2)
-            {
-                swapTwoH(i, k, tour);
-                best_tour_dist_2 = new_distance;
-                goto SECOND_ROUND;
-            }
-        }
-    ++iteration;
-    goto RETOUR;
+    //// local retour
+    //TIMER(t2)
+    //duration e1;
+    //DURATION(e1, t1, t2)
+    //while (e1.count() < TIME_LIMIT)
+    //{
+        //if (bestTourDist2 < bestTourDist)
+        //{
+            //backedup = true;
+            //memcpy(backup, tour, sizeof(int)*N);
+            //bestTourDist = bestTourDist2;
+        //}
+        //random_shuffle(tour, tour+N);
+        //twoOpt(tour, bestTourDist, N, K, t1);
+        //twoHOpt(tour, bestTourDist, N);
+        //bestTourDist2 = calculateTour(tour, N);
+        //TIMER(t2)
+        //DURATION(e1, t1, t2)
+    //}
 
-END1:
-    for (int i = 0; i < N; ++i)
-        cout << tour[i] << endl;
-    goto END;
-
-END2:
-    if (best_tour_dist < best_tour_dist_2)
-    {
+    // print tour
+    if (backedup)
         for (int i = 0; i < N; ++i)
             cout << backup[i] << endl;
-    } else {
+    else
         for (int i = 0; i < N; ++i)
             cout << tour[i] << endl;
-    }
+}
 
-END:
+int main()
+{
+    // initialization
+    int N, K;
+    srand(time(NULL)); // random seed
+    TIMER(t1);
+    vector<pair<int, pi> > graph;
+    init(N, K, graph);
+
+    // run TSP
+    initTour(N, graph, tour);
+    TSP(tour, N, K, t1);
+
     return 0;
 }
