@@ -9,7 +9,7 @@
 #include <algorithm>
 
 #define MAX 1000
-#define TIME_LIMIT 1990000000
+#define TIME_LIMIT 1980000000
 #define pf pair<float, float>
 #define pi pair<int, int>
 #define endl "\n"
