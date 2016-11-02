@@ -8,10 +8,10 @@
 #include <vector>
 #include <algorithm>
 #include <climits>
-#include <ctime>
+#include <random>
 
 #define MAX 1000
-#define TIME_LIMIT 1900000000
+#define TIME_LIMIT 1990000000
 #define pf pair<float, float>
 #define pi pair<int, int>
 #define endl "\n"
@@ -29,11 +29,13 @@ int used[MAX] = {0};       // degree of every city
 bool in_tour[MAX];         // whether a city is already in the tour, used when constructing the tour
 int counter;               // keeping track at how many edges we have found
 int parent[MAX];           // for checking whether a cycle is formed
-int tour[MAX];             // stores the complete tour
-int backup[MAX];           // a backup of the current best tour
 int distMatrix[MAX][MAX];  // distance matrix
 vector<pi> neighbors[MAX]; // sorted K nearest neighbors of each city
+int tour[MAX];
+int backup[MAX];
 int position[MAX];            // keeps track of where a city is
+random_device rd;
+mt19937 eng(rd());
 
 /*
  * Finds the parent of a city using the union find algorithm
@@ -136,11 +138,10 @@ void generateDistancesMatrix(int N)
  *
  * @param N total number of cities
  */
-void generateTour(int N)
+void generateTour(int *tour, int N)
 {
     int i = 0, current = 0;
     in_tour[0] = true;
-    tour[0] = 0;
     while (i < N)
     {
         tour[i] = current;
@@ -250,7 +251,7 @@ void init(int &N, int &K, vector<pair<int, pi> > &graph)
 void initTour(int N, vector<pair<int, pi> > &graph, int *tour)
 {
     MF(graph, N);
-    generateTour(N);
+    generateTour(tour, N);
     updateCityPosition(tour, N);
 }
 
@@ -416,37 +417,47 @@ NEXT_ROUND:
     } while (!localOptima);
 }
 
+/*
+ * Uses local search to optimize TSP until time runs our
+ */
 void TSP(int *tour, const int N, const int K, timestamp &t1)
 {
-    int bestTourDist = calculateTour(tour, N); // best tour for the 1st round
+    int bestTourDist; // best tour for the 1st round
     int bestTourDist2 = INT_MAX;
     bool backedup = false;
+    int start, finish;
+    uniform_int_distribution<> rand_N(N / 4, N / 3);
 
     // do optimization
     twoOpt(tour, bestTourDist, N, K);
     twoHOpt(tour, bestTourDist, N);
     threeOpt(tour, bestTourDist, N, K, t1);
-    //bestTourDist = calculateTour(tour, N);
+    bestTourDist = calculateTour(tour, N);
 
-    //// local retour
-    //TIMER(t2)
-    //duration e1;
-    //DURATION(e1, t1, t2)
-    //while (e1.count() < TIME_LIMIT)
-    //{
-        //if (bestTourDist2 < bestTourDist)
-        //{
-            //backedup = true;
-            //memcpy(backup, tour, sizeof(int)*N);
-            //bestTourDist = bestTourDist2;
-        //}
-        //random_shuffle(tour, tour+N);
-        //twoOpt(tour, bestTourDist, N, K, t1);
-        //twoHOpt(tour, bestTourDist, N);
-        //bestTourDist2 = calculateTour(tour, N);
-        //TIMER(t2)
-        //DURATION(e1, t1, t2)
-    //}
+    // local retour
+    memcpy(backup, tour, sizeof(int) * N);
+    backedup = true;
+    TIMER(t2)
+    duration e1;
+    DURATION(e1, t1, t2)
+    while (e1.count() < TIME_LIMIT)
+    {
+        start = rand_N(eng);
+        finish = rand_N(eng);
+        random_shuffle(tour + start, tour + N - finish);
+        //random_shuffle(begin(tour), end(tour));
+        twoOpt(tour, bestTourDist2, N, K);
+        twoHOpt(tour, bestTourDist2, N);
+        threeOpt(tour, bestTourDist2, N, K, t1);
+        bestTourDist2 = calculateTour(tour, N);
+        if (bestTourDist2 < bestTourDist)
+        {
+            memcpy(backup, tour, sizeof(int) * N);
+            bestTourDist = bestTourDist2;
+        }
+        TIMER(t2)
+        DURATION(e1, t1, t2)
+    }
 
     // print tour
     if (backedup)
@@ -460,9 +471,8 @@ void TSP(int *tour, const int N, const int K, timestamp &t1)
 int main()
 {
     // initialization
-    int N, K;
-    srand(time(NULL)); // random seed
     TIMER(t1);
+    int N, K;
     vector<pair<int, pi> > graph;
     init(N, K, graph);
 
