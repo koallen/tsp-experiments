@@ -42,7 +42,7 @@ mt19937 eng(rd());
  *
  * @param x the city which you want to get its parent
  */
-int find_set(int x)
+inline int find_set(int x)
 {
     if (x != parent[x])
         parent[x] = find_set(parent[x]);
@@ -55,7 +55,7 @@ int find_set(int x)
  * @param idxs a pair of indexes containing the two cities of an edge
  * @param N    total number of cities
  */
-bool check(pi idxs, int N)
+inline bool check(pi idxs, int N)
 {
     if (used[idxs.first] < 2 && used[idxs.second] < 2)
     {
@@ -90,7 +90,7 @@ bool check(pi idxs, int N)
  * @param idxA The index of the first city
  * @param idxB The index of the second city
  */
-int dist(int idxA, int idxB)
+inline int dist(int idxA, int idxB)
 {
     pf pointA = points[idxA];
     pf pointB = points[idxB];
@@ -103,7 +103,7 @@ int dist(int idxA, int idxB)
  * @param N     total number of cities
  * @param graph the vector which contains all the edges (unsorted)
  */
-void generateDistances(int N, vector<pair<int, pi> > &graph)
+inline void generateDistances(int N, vector<pair<int, pi> > &graph)
 {
     for (int i = 0; i < N; ++i)
         for (int j = 0; j < i; ++j)
@@ -117,7 +117,7 @@ void generateDistances(int N, vector<pair<int, pi> > &graph)
  *
  * @param N     total number of cities
  */
-void generateDistancesMatrix(int N)
+inline void generateDistancesMatrix(int N)
 {
     for (int i = 0; i < N; ++i)
         for (int j = 0; j < i; ++j)
@@ -138,7 +138,7 @@ void generateDistancesMatrix(int N)
  *
  * @param N total number of cities
  */
-void generateTour(int *tour, int N)
+inline void generateTour(int *tour, int N)
 {
     int i = 0, current = 0;
     in_tour[0] = true;
@@ -156,7 +156,7 @@ void generateTour(int *tour, int N)
     }
 }
 
-int calculateTour(int *tour, int N)
+inline int calculateTour(int *tour, int N)
 {
     int tour_distance = 0;
     for (int i = 0; i < N - 1; ++i)
@@ -175,7 +175,7 @@ int deltaEval(int i, int k, int *tour, int current_best, int N)
     return new_distance;
 }
 
-void reverse(int start, int end, int N, int *tour)
+inline void reverse(int start, int end, int N, int *tour)
 {
     int num = ((start <= end ? end - start : (end + N) - start) + 1) / 2;
     int temp, currentHead = start, currentTail = end;
@@ -194,14 +194,14 @@ void reverse(int start, int end, int N, int *tour)
     }
 }
 
-int deltaTwoH(int i, int k, int *tour, int current_best, int N)
+inline int deltaTwoH(int i, int k, int *tour, int current_best, int N)
 {
     int new_distance = current_best - distMatrix[tour[i-1]][tour[i]] - distMatrix[tour[i]][tour[i+1]] - distMatrix[tour[k]][tour[k+1]];
     new_distance += distMatrix[tour[i-1]][tour[i+1]] + distMatrix[tour[k]][tour[i]] + distMatrix[tour[i]][tour[k+1]];
     return new_distance;
 }
 
-void swapTwoH(int a, int b, int *tour)
+inline void swapTwoH(int a, int b, int *tour)
 {
     int temp = tour[a];
     for (int i = a; i < b; ++i)
@@ -209,13 +209,13 @@ void swapTwoH(int a, int b, int *tour)
     tour[b] = temp;
 }
 
-void updateCityPosition(int *tour, int N)
+inline void updateCityPosition(int *tour, int N)
 {
     for (int i = 0; i < N; ++i)
         position[tour[i]] = i;
 }
 
-void MF(vector<pair<int, pi> > &graph, int N)
+inline void MF(vector<pair<int, pi> > &graph, int N)
 {
     counter = 1;
     // multi fragment algorithm
@@ -228,7 +228,7 @@ void MF(vector<pair<int, pi> > &graph, int N)
         }
 }
 
-void init(int &N, int &K, vector<pair<int, pi> > &graph)
+inline void init(int &N, int &K, vector<pair<int, pi> > &graph)
 {
     float x, y;
 
@@ -248,7 +248,7 @@ void init(int &N, int &K, vector<pair<int, pi> > &graph)
     generateDistances(N, graph);
 }
 
-void initTour(int N, vector<pair<int, pi> > &graph, int *tour)
+inline void initTour(int N, vector<pair<int, pi> > &graph, int *tour)
 {
     MF(graph, N);
     generateTour(tour, N);
@@ -314,7 +314,7 @@ void twoHOpt(int *tour, int &best_tour_dist, int N)
         }
 }
 
-void orderEdges(int &A, int &B, int &C, int &D, int &E, int &F,
+inline void orderEdges(int &A, int &B, int &C, int &D, int &E, int &F,
                 int U, int V, int W, int X, int Y, int Z)
 {
     E = Y;
