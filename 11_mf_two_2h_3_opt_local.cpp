@@ -426,7 +426,8 @@ void TSP(int *tour, const int N, const int K, timestamp &t1)
     int bestTourDist2 = INT_MAX;
     bool backedup = false;
     int start, finish;
-    uniform_int_distribution<> rand_N(N / 4, N / 3);
+    uniform_int_distribution<> rand_first(N / 4, N / 3);
+    uniform_int_distribution<> rand_second(N / 2, 3 * N / 4);
 
     // do optimization
     twoOpt(tour, bestTourDist, N, K);
@@ -442,9 +443,9 @@ void TSP(int *tour, const int N, const int K, timestamp &t1)
     DURATION(e1, t1, t2)
     while (e1.count() < TIME_LIMIT)
     {
-        start = rand_N(eng);
-        finish = rand_N(eng);
-        random_shuffle(tour + start, tour + N - finish);
+        start = rand_first(eng);
+        finish = rand_second(eng);
+        random_shuffle(tour + start, tour + finish);
         //random_shuffle(begin(tour), end(tour));
         twoOpt(tour, bestTourDist2, N, K);
         twoHOpt(tour, bestTourDist2, N);
