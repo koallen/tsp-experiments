@@ -7,7 +7,6 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
-#include <climits>
 #include <random>
 
 #define MAX 1000
@@ -31,8 +30,8 @@ int counter;               // keeping track at how many edges we have found
 int parent[MAX];           // for checking whether a cycle is formed
 int distMatrix[MAX][MAX];  // distance matrix
 vector<pi> neighbors[MAX]; // sorted K nearest neighbors of each city
-int tour[MAX];
-int backup[MAX];
+uint16_t tour[MAX];
+uint16_t backup[MAX];
 int position[MAX];            // keeps track of where a city is
 random_device rd;
 mt19937 eng(rd());
@@ -138,7 +137,7 @@ inline void generateDistancesMatrix(int N)
  *
  * @param N total number of cities
  */
-inline void generateTour(int *tour, int N)
+inline void generateTour(uint16_t *tour, int N)
 {
     int i = 0, current = 0;
     in_tour[0] = true;
@@ -156,7 +155,7 @@ inline void generateTour(int *tour, int N)
     }
 }
 
-inline int calculateTour(int *tour, int N)
+inline int calculateTour(uint16_t *tour, int N)
 {
     int tour_distance = 0;
     for (int i = 0; i < N - 1; ++i)
@@ -165,7 +164,7 @@ inline int calculateTour(int *tour, int N)
     return tour_distance;
 }
 
-int deltaEval(int i, int k, int *tour, int current_best, int N)
+int deltaEval(int i, int k, uint16_t *tour, int current_best, int N)
 {
     int new_distance;
     if (k == N - 1)
@@ -175,7 +174,7 @@ int deltaEval(int i, int k, int *tour, int current_best, int N)
     return new_distance;
 }
 
-inline void reverse(int start, int end, int N, int *tour)
+inline void reverse(int start, int end, int N, uint16_t *tour)
 {
     int num = ((start <= end ? end - start : (end + N) - start) + 1) / 2;
     int temp, currentHead = start, currentTail = end;
@@ -194,14 +193,14 @@ inline void reverse(int start, int end, int N, int *tour)
     }
 }
 
-inline int deltaTwoH(int i, int k, int *tour, int current_best, int N)
+inline int deltaTwoH(int i, int k, uint16_t *tour, int current_best, int N)
 {
     int new_distance = current_best - distMatrix[tour[i-1]][tour[i]] - distMatrix[tour[i]][tour[i+1]] - distMatrix[tour[k]][tour[k+1]];
     new_distance += distMatrix[tour[i-1]][tour[i+1]] + distMatrix[tour[k]][tour[i]] + distMatrix[tour[i]][tour[k+1]];
     return new_distance;
 }
 
-inline void swapTwoH(int a, int b, int *tour)
+inline void swapTwoH(int a, int b, uint16_t *tour)
 {
     int temp = tour[a];
     for (int i = a; i < b; ++i)
@@ -209,10 +208,13 @@ inline void swapTwoH(int a, int b, int *tour)
     tour[b] = temp;
 }
 
-inline void updateCityPosition(int *tour, int N)
+inline void updateCityPosition(uint16_t *tour, int N, int &max)
 {
     for (int i = 0; i < N; ++i)
+    {
+        max = ::max(max, distMatrix[tour[i]][tour[(i+1)%N]]);
         position[tour[i]] = i;
+    }
 }
 
 inline void MF(vector<pair<int, pi> > &graph, int N)
@@ -248,27 +250,36 @@ inline void init(int &N, int &K, vector<pair<int, pi> > &graph)
     generateDistances(N, graph);
 }
 
-inline void initTour(int N, vector<pair<int, pi> > &graph, int *tour)
+inline void initTour(int N, vector<pair<int, pi> > &graph, uint16_t *tour, int &max, int &min)
 {
+    if (graph.size() == 0)
+        min = 0;
+    else
+        min = graph[0].first;
     MF(graph, N);
     generateTour(tour, N);
-    updateCityPosition(tour, N);
+    updateCityPosition(tour, N, max);
 }
 
 /*
  * Optimize with 2-opt exchange until local optima
  */
-void twoOpt(int *tour, int &bestTourDist, const int N, const int K)
+void twoOpt(uint16_t *tour, const int N, const int K, timestamp &t1, int &max, int &min)
 {
     int u, v, x, y;
     int pos_u, pos_v, pos_x, pos_y;
     bool localOptima;
+    duration e1;
 
     // 2-opt local search
     do {
         localOptima = true;
         for (int pos_u = 0; pos_u < N; ++pos_u)
         {
+            TIMER(t2)
+            DURATION(e1, t1, t2)
+            if (e1.count() > TIME_LIMIT)
+                return;
             pos_v = (pos_u + 1) % N;
             u = tour[pos_u];
             v = tour[pos_v];
@@ -282,12 +293,13 @@ void twoOpt(int *tour, int &bestTourDist, const int N, const int K)
                 if (v == x || y == u)
                     continue;
 
-                // TODO: minimize runtime with min and max
+                if (distMatrix[u][x] + min > distMatrix[u][v] + max)
+                    break;
 
                 if (distMatrix[u][x] + distMatrix[v][y] < distMatrix[u][v] + distMatrix[x][y])
                 {
-                    bestTourDist = deltaEval(pos_u, pos_x, tour, bestTourDist, N);
                     reverse(pos_v, pos_x, N, tour);
+                    max = ::max(max, ::max(distMatrix[u][x], distMatrix[v][y]));
                     localOptima = false;
                     break;
                 }
@@ -296,22 +308,39 @@ void twoOpt(int *tour, int &bestTourDist, const int N, const int K)
     } while (!localOptima);
 }
 
-void twoHOpt(int *tour, int &best_tour_dist, int N)
+void twoHOpt(uint16_t *tour, int N, timestamp &t1)
 {
     // TODO: look into faster implementation of 2.5 opt
-    int new_distance;
+    int u, v, x, y, z;
+    duration e1;
+    bool localOptima;
     // 2.5 opt
-    for (int i = 1; i < N - 3; ++i)
-        for (int k = i + 2; k < N - 1; ++k)
+    do {
+        localOptima = true;
+        for (int i = 1; i < N - 3; ++i)
         {
-            new_distance = deltaTwoH(i, k, tour, best_tour_dist, N);
-            if (new_distance < best_tour_dist)
+            TIMER(t2)
+            DURATION(e1, t1, t2)
+            if (e1.count() > TIME_LIMIT)
+                return;
+
+            x = tour[i-1];
+            y = tour[i];
+            z = tour[i+1];
+
+            for (int k = i + 2; k < N - 1; ++k)
             {
-                swapTwoH(i, k, tour);
-                best_tour_dist = new_distance;
-                break;
+                u = tour[k];
+                v = tour[k+1];
+                if (distMatrix[x][y] + distMatrix[y][z] + distMatrix[u][v] > distMatrix[x][z] + distMatrix[u][y] + distMatrix[y][v])
+                {
+                    swapTwoH(i, k, tour);
+                    localOptima = false;
+                    break;
+                }
             }
         }
+    } while (!localOptima);
 }
 
 inline void orderEdges(int &A, int &B, int &C, int &D, int &E, int &F,
@@ -337,7 +366,7 @@ inline void orderEdges(int &A, int &B, int &C, int &D, int &E, int &F,
 /*
  * Optimize with 3-opt exchange until local optima
  */
-void threeOpt(int *tour, int &bestTourDist, const int N, const int K, timestamp t1)
+void threeOpt(uint16_t *tour, const int N, const int K, timestamp t1, int &max, int &min)
 {
     int u, v, a, b, x, y;
     int pos_u, pos_v, pos_a, pos_b, pos_x, pos_y;
@@ -367,8 +396,13 @@ void threeOpt(int *tour, int &bestTourDist, const int N, const int K, timestamp 
                 a = tour[pos_a];
                 b = tour[pos_b];
 
-                // TODO: use max and min to reduce runtime
                 if (v == a || u == a)
+                    continue;
+
+                if (distMatrix[u][b] + 2 * min > distMatrix[u][v] + 2 * max)
+                    break;
+
+                if (distMatrix[u][b] + 2 * min > distMatrix[u][v] + distMatrix[a][b] + max)
                     continue;
 
                 for (int j = 0; j < K; ++j)
@@ -378,9 +412,11 @@ void threeOpt(int *tour, int &bestTourDist, const int N, const int K, timestamp 
                     x = tour[pos_x];
                     y = tour[pos_y];
 
-                    // TODO: use max and min to reduce runtime
                     if (x == b || y == b || y == a || x == u || x == v)
                         continue;
+
+                    if (distMatrix[u][b] + distMatrix[v][y] + min > distMatrix[u][v] + distMatrix[a][b] + max)
+                        break;
 
                     int dist = distMatrix[u][v] + distMatrix[a][b] + distMatrix[x][y];
                     orderEdges(pos_1, pos_2, pos_3, pos_4, pos_5, pos_6, pos_u, pos_v, pos_a, pos_b, pos_x, pos_y);
@@ -391,22 +427,26 @@ void threeOpt(int *tour, int &bestTourDist, const int N, const int K, timestamp 
                         reverse(pos_6, pos_1, N, tour);
                         reverse(pos_4, pos_5, N, tour);
                         localOptima = false;
+                        max = ::max(max, ::max(distMatrix[one][four], ::max(distMatrix[two][six], distMatrix[three][five])));
                         goto NEXT_ROUND;
                     } else if (distMatrix[two][four] + distMatrix[five][one] + distMatrix[six][three] < dist) {
                         reverse(pos_6, pos_1, N, tour);
                         reverse(pos_2, pos_3, N, tour);
                         localOptima = false;
+                        max = ::max(max, ::max(distMatrix[two][four], ::max(distMatrix[five][one], distMatrix[six][three])));
                         goto NEXT_ROUND;
                     } else if (distMatrix[one][three] + distMatrix[two][five] + distMatrix[four][six] < dist) {
                         reverse(pos_2, pos_3, N, tour);
                         reverse(pos_4, pos_5, N, tour);
                         localOptima = false;
+                        max = ::max(max, ::max(distMatrix[one][three], ::max(distMatrix[two][five], distMatrix[four][six])));
                         goto NEXT_ROUND;
                     } else if (distMatrix[two][five] + distMatrix[four][one] + distMatrix[six][three] < dist) {
                         reverse(pos_1, pos_6, N, tour);
                         reverse(pos_2, pos_3, N, tour);
                         reverse(pos_4, pos_5, N, tour);
                         localOptima = false;
+                        max = ::max(max, ::max(distMatrix[two][five], ::max(distMatrix[four][one], distMatrix[six][three])));
                         goto NEXT_ROUND;
                     }
                 }
@@ -417,44 +457,65 @@ NEXT_ROUND:
     } while (!localOptima);
 }
 
+inline void doubleBridge(uint16_t *tour, const int N)
+{
+    uniform_int_distribution<int> pickCity(1, N/4);
+    int temp, swap1, swap2;
+    int A = pickCity(eng);
+    int AtoB = pickCity(eng);
+    int B = A + AtoB;
+    int C = N - AtoB;
+
+    for (int i = 0; i < AtoB; ++i)
+    {
+        swap1 = A + i;
+        swap2 = C + i;
+        temp = tour[swap1];
+        tour[swap1] = tour[swap2];
+        tour[swap2] = temp;
+    }
+}
+
 /*
  * Uses local search to optimize TSP until time runs our
  */
-void TSP(int *tour, const int N, const int K, timestamp &t1)
+void TSP(uint16_t *tour, const int N, const int K, timestamp &t1, int &max, int &min)
 {
     int bestTourDist; // best tour for the 1st round
-    int bestTourDist2 = INT_MAX;
+    int bestTourDist2;
     bool backedup = false;
-    int start, finish;
-    uniform_int_distribution<> rand_first(N / 3, N / 2);
-    uniform_int_distribution<> rand_second(N / 2, 3 * N / 4);
 
     // do optimization
-    twoOpt(tour, bestTourDist, N, K);
-    twoHOpt(tour, bestTourDist, N);
-    threeOpt(tour, bestTourDist, N, K, t1);
+    twoOpt(tour, N, K, t1, max, min);
+    twoHOpt(tour, N, t1);
+    threeOpt(tour, N, K, t1, max, min);
     bestTourDist = calculateTour(tour, N);
 
     // local retour
-    memcpy(backup, tour, sizeof(int) * N);
+    memcpy(backup, tour, sizeof(uint16_t) * N);
     backedup = true;
     TIMER(t2)
     duration e1;
     DURATION(e1, t1, t2)
     while (e1.count() < TIME_LIMIT)
     {
-        start = rand_first(eng);
-        finish = rand_second(eng);
-        //finish = start + rand_first(eng);
-        random_shuffle(tour + start, tour + finish);
-        //random_shuffle(begin(tour), end(tour));
-        twoOpt(tour, bestTourDist2, N, K);
-        twoHOpt(tour, bestTourDist2, N);
-        threeOpt(tour, bestTourDist2, N, K, t1);
+        // purturbation
+        if (N >= 8)
+            doubleBridge(tour, N);
+        else
+            random_shuffle(tour, tour+N);
+        // update max
+        for (int i = 0; i < N; ++i) {
+            max = ::max(max, distMatrix[tour[i]][tour[(i + 1) % N]]);
+        }
+        // rerun local search
+        twoOpt(tour, N, K, t1, max, min);
+        twoHOpt(tour, N, t1);
+        threeOpt(tour, N, K, t1, max, min);
         bestTourDist2 = calculateTour(tour, N);
         if (bestTourDist2 < bestTourDist)
         {
-            memcpy(backup, tour, sizeof(int) * N);
+            memcpy(backup, tour, sizeof(uint16_t) * N);
             bestTourDist = bestTourDist2;
         }
         TIMER(t2)
@@ -474,13 +535,13 @@ int main()
 {
     // initialization
     TIMER(t1);
-    int N, K;
+    int N, K, max = 0, min;
     vector<pair<int, pi> > graph;
     init(N, K, graph);
 
     // run TSP
-    initTour(N, graph, tour);
-    TSP(tour, N, K, t1);
+    initTour(N, graph, tour, max, min);
+    TSP(tour, N, K, t1, max, min);
 
     return 0;
 }
