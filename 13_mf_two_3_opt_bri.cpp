@@ -8,10 +8,9 @@
 #include <vector>
 #include <algorithm>
 #include <random>
-#include <ctime>
 
 #define MAX 1000
-#define TIME_LIMIT 1985000000
+#define TIME_LIMIT 1990000000
 #define pf pair<float, float>
 #define pi pair<int, int>
 #define endl "\n"
@@ -236,7 +235,7 @@ inline void init(int &N, int &K, vector<pair<int, pi> > &graph)
     float x, y;
 
     cin >> N;
-    K = N / 17 + 0.5;
+    K = N / 17;
 
     for (int i = 0; i < N; ++i)
         parent[i] = i;
@@ -488,7 +487,7 @@ void TSP(uint16_t *tour, const int N, const int K, timestamp &t1, int &max, int 
 
     // do optimization
     twoOpt(tour, N, K, t1, max, min);
-    twoHOpt(tour, N, t1);
+    //twoHOpt(tour, N, t1);
     threeOpt(tour, N, K, t1, max, min);
     bestTourDist = calculateTour(tour, N);
 
@@ -511,7 +510,7 @@ void TSP(uint16_t *tour, const int N, const int K, timestamp &t1, int &max, int 
         }
         // rerun local search
         twoOpt(tour, N, K, t1, max, min);
-        twoHOpt(tour, N, t1);
+        //twoHOpt(tour, N, t1);
         threeOpt(tour, N, K, t1, max, min);
         bestTourDist2 = calculateTour(tour, N);
         if (bestTourDist2 < bestTourDist)
@@ -541,8 +540,6 @@ int main()
     int N, K, max = 0, min;
     vector<pair<int, pi> > graph;
     init(N, K, graph);
-    if (N == 0)
-        return 0;
 
     // run TSP
     initTour(N, graph, tour, max, min);
