@@ -15,3 +15,4 @@ about this problem on Kattis, please refer to the [problem description](https://
 | 5   | 2-Opt Delta (w/ MF)               | 20.507495  |
 | 6   | 2-Opt Delta (w/ MF) random retour | 21.981217  |
 | 11  | 2-Opt 2.5-Opt 3-Opt local retour  | 40.383749  |
+| 12  | 2-Opt 2.5-Opt 3-Opt double bridge | 41.578436  |
